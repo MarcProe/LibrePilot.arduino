@@ -26,7 +26,7 @@ LibrePilotSerial::LibrePilotSerial(SoftwareSerial* ser) {
 
 void LibrePilotSerial::request(unsigned long objId) {
   _pBuf[0] = 0x3c; //sync
-  _pBuf[1] = 0x21; //msgtype
+  _pBuf[1] = 0x21; //msgtype (0x21 = request)
   _pBuf[2] = 0x0a; //len
   _pBuf[3] = 0x00; //len
   _pBuf[4] = (objId >> (8*0)) & 0xff; 
@@ -38,6 +38,29 @@ void LibrePilotSerial::request(unsigned long objId) {
   _pBuf[10] = _crc(10); //crc
 
   serial->write(_pBuf, 11);
+}
+
+void LibrePilotSerial::send(unsigned long objId, byte* data, int length) {
+  byte header[10];
+  header[0] = 0x3c; //sync
+  header[1] = 0x20; //msgtype (0x20 = send)
+  
+  int pLen  = length + 10;  
+  header[2] = (pLen >> (8*0)) & 0xff;
+  header[3] = (pLen >> (8*1)) & 0xff;
+  
+  header[4] = (objId >> (8*0)) & 0xff; 
+  header[5] = (objId >> (8*1)) & 0xff;
+  header[6] = (objId >> (8*2)) & 0xff;
+  header[7] = (objId >> (8*3)) & 0xff;
+  header[8] = 0x00; //iid
+  header[9] = 0x00; //iid
+
+  byte crc = _crc(header, data, length);
+
+  serial->write(header, 10);
+  serial->write(data, length);
+  serial->write(crc);   
 }
 
 boolean LibrePilotSerial::receive(unsigned long objId, byte *ret, unsigned int timeout = 100) {
@@ -121,6 +144,18 @@ byte LibrePilotSerial::_crc(int len) {
   byte ccrc = 0;
   for (unsigned int k = 0; k < len; k++) {
       ccrc = _CRC_TABLE[((byte) (ccrc ^ _pBuf[k])) & 0xFF];
+  }
+  return (ccrc & 0xFF);
+}
+
+
+byte LibrePilotSerial::_crc(byte* header, byte* data, int len) {
+  byte ccrc = 0;
+  for (unsigned int k = 0; k < 10; k++) {
+      ccrc = _CRC_TABLE[((byte) (ccrc ^ header[k])) & 0xFF];
+  }
+  for (unsigned int k = 0; k < len; k++) {
+      ccrc = _CRC_TABLE[((byte) (ccrc ^ data[k])) & 0xFF];
   }
   return (ccrc & 0xFF);
 }
