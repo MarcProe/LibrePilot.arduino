@@ -63,7 +63,7 @@ void LibrePilotSerial::send(unsigned long objId, byte* data, int length) {
   serial->write(crc);   
 }
 
-boolean LibrePilotSerial::receive(unsigned long objId, byte *ret, unsigned int timeout = 100) {
+boolean LibrePilotSerial::receive(unsigned long objId, byte *ret, unsigned int timeout) {
   boolean loop = 1;
   unsigned long time = millis();
   
